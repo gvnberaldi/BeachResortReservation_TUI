@@ -22,9 +22,7 @@ class App:
 		self.__menu = Menu.Builder(Description('Beach Resort Reservation'))\
 			.with_entry(Entry.create('1', 'Make a new reservation', on_selected=lambda: self.__make_new_reservation()))\
 			.with_entry(Entry.create('2', 'Delete a reservation', on_selected=lambda: self.__delete_reservation()))\
-			.with_entry(Entry.create('3', 'Modify a reservation', on_selected=lambda: self.__modify_reservation()))\
-			.with_entry(Entry.create('4', 'Show my reservations', on_selected=lambda: self.__show_reservations()))\
-			.with_entry(Entry.create('5', 'Sort by date', on_selected=lambda: self.__sort_by_date()))\
+			.with_entry(Entry.create('3', 'Show my reservations', on_selected=lambda: self.__show_reservations()))\
 			.with_entry(Entry.create('0', 'Exit', on_selected=lambda: print('Bye!'), is_exit=True))\
 			.build()
 	
@@ -40,16 +38,11 @@ class App:
 	
 	def __delete_reservation(self):
 		pass
-	
-	def __modify_reservation(self):
-		pass
-	
+
 	def __show_reservations(self):
 		pass
 	
-	def __sort_by_date(self):
-		pass
-	
+
 	def run(self) -> None:
 		try:
 			self.__run()
