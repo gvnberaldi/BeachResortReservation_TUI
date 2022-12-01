@@ -4,6 +4,7 @@ from unittest.mock import patch, Mock, call
 import pytest
 from valid8 import ValidationError
 
+from beach_resort_reservation import menu_utils
 from beach_resort_reservation.menu import Entry, Key, Description, Menu
 
 
@@ -46,6 +47,10 @@ class TestDescription:
 
 
 class TestMenu:
+    def test_menu_creation_without_using_builder_raises_a_validation_error(self):
+        with pytest.raises(ValidationError):
+            Menu(Description('description test'), object())
+
     def test_menu_with_no_exit_must_raise_an_exception(self):
         with pytest.raises(ValidationError):
             Menu.Builder(Description('menu')).with_entry(Entry.create('1', 'entry with not exit', on_selected=lambda: print('test'), is_exit=False)).build()
@@ -71,6 +76,19 @@ class TestMenu:
 
         mocked_print.assert_any_call('exit')
         mocked_input.assert_called()
+
+    @patch('builtins.input', side_effect=['1', '-2','0'])
+    @patch('builtins.print')
+    def test_calls_on_not_existing_key_must_advise_user(self, mocked_print:Mock, mocked_input:Mock):
+        menu = Menu.Builder(Description('menu')) \
+            .with_entry(Entry.create('1', 'entry with not exit', on_selected=lambda: print('test1'), is_exit=False)) \
+            .with_entry(Entry.create('0', 'entry with not exit', on_selected=lambda: print('exit'), is_exit=True)) \
+            .build()
+
+        menu.run()
+        mocked_print.assert_any_call(menu_utils.MENU_INVALID_KEY_SELECTION)
+        mocked_input.assert_called()
+
 
 
 

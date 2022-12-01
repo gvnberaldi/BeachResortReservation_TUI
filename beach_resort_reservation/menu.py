@@ -4,6 +4,7 @@ from typing import Callable, List, Dict, Optional, Any
 from typeguard import typechecked
 from valid8 import validate
 
+from beach_resort_reservation import menu_utils
 from validation.regex import pattern
 
 
@@ -13,7 +14,7 @@ class Description:
     value: str
 
     def __post_init__(self):
-        validate('Description.value', self.value, min_len=1, max_len=900, custom=pattern(r'[0-9A-Za-z ;.,_-]*'))
+        validate('Description.value', self.value, min_len=1, max_len=900, custom=pattern(menu_utils.DESCRIPTION_REGEX))
 
     def __str__(self):
         return self.value
@@ -25,7 +26,7 @@ class Key:
     value: str
 
     def __post_init__(self):
-        validate('Key.value', self.value, min_len=1, max_len=10, custom=pattern(r'[0-9A-Za-z_-]*'))
+        validate('Key.value', self.value, min_len=1, max_len=10, custom=pattern(menu_utils.KEY_REGEX))
 
     def __str__(self):
         return self.value
@@ -84,7 +85,7 @@ class Menu:
                 entry.on_selected()
                 return entry.is_exit
             except (KeyError, TypeError, ValueError):
-                print('Invalid selection. Please, try again...')
+                print(menu_utils.MENU_INVALID_KEY_SELECTION)
 
     def run(self) -> None:
         while True:

@@ -5,6 +5,7 @@ from typing import Any, Tuple, Callable
 
 from valid8 import validate, ValidationError
 
+from beach_resort_reservation import app_utils
 from beach_resort_reservation.menu import Menu, Entry, Description
 
 
@@ -13,17 +14,17 @@ class App:
 	__delimiter = '\t'
 	
 	def __init__(self):
-		self.__login = Menu.Builder(Description('Login'))\
+		self.__login_menu = Menu.Builder(Description(app_utils.APP_NAME_LOGIN))\
 			.with_entry(Entry.create('1', 'Login', on_selected=lambda: self.__do_login()))\
 			.with_entry(Entry.create('2', 'Register', on_selected=lambda: self.__do_registration()))\
-			.with_entry(Entry.create('0', 'Exit', on_selected=lambda: print('Bye!'), is_exit=True))\
+			.with_entry(Entry.create('0', 'Exit', on_selected=lambda: print(app_utils.APP_EXIT_MESSAGE), is_exit=True))\
 			.build()
 		
 		self.__menu = Menu.Builder(Description('Beach Resort Reservation'))\
 			.with_entry(Entry.create('1', 'Make a new reservation', on_selected=lambda: self.__make_new_reservation()))\
 			.with_entry(Entry.create('2', 'Delete a reservation', on_selected=lambda: self.__delete_reservation()))\
 			.with_entry(Entry.create('3', 'Show my reservations', on_selected=lambda: self.__show_reservations()))\
-			.with_entry(Entry.create('0', 'Exit', on_selected=lambda: print('Bye!'), is_exit=True))\
+			.with_entry(Entry.create('0', 'Exit', on_selected=lambda: print(app_utils.APP_EXIT_MESSAGE), is_exit=True))\
 			.build()
 	
 	# The following methos should call the REST API
@@ -50,7 +51,7 @@ class App:
 			print('Panic error!', file=sys.stderr)
 	
 	def __run(self) -> None:
-		self.__login.run()
+		self.__login_menu.run()
 		
 
 def main(name: str):
