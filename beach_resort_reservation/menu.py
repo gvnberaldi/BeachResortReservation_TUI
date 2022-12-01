@@ -4,7 +4,6 @@ from typing import Callable, List, Dict, Optional, Any
 from typeguard import typechecked
 from valid8 import validate
 
-from validation.dataclasses import validate_dataclass
 from validation.regex import pattern
 
 
@@ -14,8 +13,7 @@ class Description:
     value: str
 
     def __post_init__(self):
-        validate_dataclass(self)
-        validate('Description.value', self.value, min_len=1, max_len=1000, custom=pattern(r'[0-9A-Za-z ;.,_-]*'))
+        validate('Description.value', self.value, min_len=1, max_len=900, custom=pattern(r'[0-9A-Za-z ;.,_-]*'))
 
     def __str__(self):
         return self.value
@@ -27,7 +25,6 @@ class Key:
     value: str
 
     def __post_init__(self):
-        validate_dataclass(self)
         validate('Key.value', self.value, min_len=1, max_len=10, custom=pattern(r'[0-9A-Za-z_-]*'))
 
     def __str__(self):
@@ -42,8 +39,6 @@ class Entry:
     on_selected: Callable[[], None] = field(default=lambda: None)
     is_exit: bool = field(default=False)
 
-    def __post_init__(self):
-        validate_dataclass(self)
 
     @staticmethod
     def create(key: str, description: str, on_selected: Callable[[], None]=lambda: None, is_exit: bool=False) -> 'Entry':
@@ -56,11 +51,10 @@ class Menu:
     description: Description
     __entries: List[Entry] = field(default_factory=list, repr=False, init=False)
     __key2entry: Dict[Key, Entry] = field(default_factory=dict, repr=False, init=False)
-    create_key: InitVar[Any] = field(default=None)
+    create_key: InitVar[Any] = field(default='')
 
     def __post_init__(self, create_key: Any):
         validate('create_key', create_key, custom=Menu.Builder.is_valid_key)
-        validate_dataclass(self)
 
     def _add_entry(self, value: Entry, create_key: Any) -> None:
         validate('create_key', create_key, custom=Menu.Builder.is_valid_key)
@@ -77,7 +71,7 @@ class Menu:
         print(fmt.format('*', '*' * length, '*'))
         print(fmt.format(' ', self.description.value, ' '))
         print(fmt.format('*', '*' * length, '*'))
-        self.auto_select()
+        #self.auto_select()
         for entry in self.__entries:
             print(f'{entry.key}:\t{entry.description}')
 

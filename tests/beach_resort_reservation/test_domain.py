@@ -1,10 +1,13 @@
+from datetime import datetime
 from unittest.mock import patch
 
 import pytest
 from valid8 import ValidationError
+from dateutil.relativedelta import *
 
 import beach_resort_reservation
-from beach_resort_reservation.domain import NumberOfSeats, ReservedUmbrellaID
+from beach_resort_reservation import domain_utils
+from beach_resort_reservation.domain import NumberOfSeats, ReservedUmbrellaID, Reservation
 
 
 class TestNumberOfSeats:
@@ -42,3 +45,32 @@ class TestReservationUmbrellaID:
     def test_umbrella_id_between_min_and_max_must_be_accepted(self, test_input):
         umbrella_id=ReservedUmbrellaID(test_input)
         assert umbrella_id.value == test_input
+
+
+
+class TestReservation:
+    @pytest.mark.parametrize("reservation_input",
+                             [ Reservation(number_of_seats=NumberOfSeats(2), umbrella_id=ReservedUmbrellaID(1), \
+                                           reservation_start_date=(datetime.today()).date(), \
+                                          reservation_end_date=(datetime.today()+relativedelta(days=+1)).date()),
+                               Reservation(number_of_seats=NumberOfSeats(2), umbrella_id=ReservedUmbrellaID(1), \
+                                           reservation_start_date=datetime.today().date(), \
+                                           reservation_end_date=(datetime.today() + relativedelta(months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE)).date()),
+                              ])
+    def test_reservation_with_correct_data_must_raise_validation_error(self, reservation_input):
+        assert reservation_input.number_of_seats.value == 2
+
+    @pytest.mark.parametrize("reservation_input",[
+        (2, 1, datetime.today().date(), (datetime.today() + relativedelta(days=-1)).date()),
+        (2, 1, datetime.today().date(), (datetime.today() + relativedelta(months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE,days=1)).date()),
+        (2, 1, datetime.today().date(), (datetime.today() + relativedelta(years=1)).date()),
+        (2, 1, datetime.today().date(), (datetime.today() + relativedelta(months=-domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE)).date())
+
+    ])
+    def test_reservation_with_wrong_end_date_must_raise_validation_error(self,reservation_input):
+        with pytest.raises(ValidationError):
+
+            Reservation(number_of_seats=NumberOfSeats(reservation_input[0]), umbrella_id=ReservedUmbrellaID(reservation_input[1]), \
+                        reservation_start_date=reservation_input[2], \
+                        reservation_end_date=reservation_input[3])
+

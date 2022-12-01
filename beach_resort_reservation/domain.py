@@ -1,15 +1,12 @@
+import datetime
 from dataclasses import dataclass
 
 import valid8
 from typeguard import check_argument_types, check_return_type, typechecked
+from dateutil.relativedelta import relativedelta
+
 
 from beach_resort_reservation import domain_utils
-
-
-@typechecked
-@dataclass(frozen=True, order=True)
-class Reservation:
-    pass
 
 
 
@@ -35,5 +32,21 @@ class ReservedUmbrellaID:
 
     def __str__(self):
         return f'umbrella id: {self.value}'
+
+
+@typechecked
+@dataclass(frozen=True, order=True)
+class Reservation:
+    number_of_seats: NumberOfSeats
+    umbrella_id: ReservedUmbrellaID
+    reservation_start_date: datetime.date
+    reservation_end_date: datetime.date
+
+    def __post_init__(self):
+        valid8.validate('end date validation', self.reservation_end_date, min_value=self.reservation_start_date,
+                        max_value=self.reservation_start_date + relativedelta(months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE))
+
+
+
 
 
