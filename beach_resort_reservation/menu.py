@@ -78,7 +78,7 @@ class Menu:
     def __select_from_input(self) -> bool:
         while True:
             try:
-                line = input("? ")
+                line = input(" ? ")
                 key = Key(line.strip())
                 entry = self.__key2entry[key]
                 entry.on_selected()
