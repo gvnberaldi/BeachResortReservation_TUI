@@ -175,7 +175,6 @@ class App:
         try:
             self.__run()
         except Exception as e:
-            #TODO remove
             print('Panic error!', file=sys.stderr)
             print(e)
 
