@@ -97,7 +97,7 @@ class App:
         first_attempt_passwords: bool = True
         while password_not_equals:
             if not first_attempt_passwords:
-                print('Passwords are different, please write them another time: ')
+                print(app_utils.PASSWORDS_DIFFERENT_ON_REGISTRATION_ERROR_MESSAGE)
             password: Password = self.__ask_until_provided_field(Password, 'password: ', 'password')
             repeated_password: Password = self.__ask_until_provided_field(Password, 'repeat password: ', 'password')
 
