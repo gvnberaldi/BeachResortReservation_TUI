@@ -18,7 +18,7 @@ class Description:
 
     def __str__(self):
         return self.value
-    
+
 
 @typechecked
 @dataclass(order=True, frozen=True)
@@ -30,8 +30,8 @@ class Key:
 
     def __str__(self):
         return self.value
-    
-    
+
+
 @typechecked
 @dataclass(frozen=True)
 class Entry:
@@ -40,12 +40,12 @@ class Entry:
     on_selected: Callable[[], None] = field(default=lambda: None)
     is_exit: bool = field(default=False)
 
-
     @staticmethod
-    def create(key: str, description: str, on_selected: Callable[[], None]=lambda: None, is_exit: bool=False) -> 'Entry':
+    def create(key: str, description: str, on_selected: Callable[[], None] = lambda: None,
+               is_exit: bool = False) -> 'Entry':
         return Entry(Key(key), Description(description), on_selected, is_exit)
-    
-    
+
+
 @typechecked
 @dataclass(frozen=True)
 class Menu:
@@ -53,6 +53,9 @@ class Menu:
     __entries: List[Entry] = field(default_factory=list, repr=False, init=False)
     __key2entry: Dict[Key, Entry] = field(default_factory=dict, repr=False, init=False)
     create_key: InitVar[Any] = field(default='')
+    auto_select: Callable[[], None] = field(default=lambda: None)
+
+    _is_running: bool = True
 
     def __post_init__(self, create_key: Any):
         validate('create_key', create_key, custom=Menu.Builder.is_valid_key)
@@ -72,7 +75,7 @@ class Menu:
         print(fmt.format('*', '*' * length, '*'))
         print(fmt.format(' ', self.description.value, ' '))
         print(fmt.format('*', '*' * length, '*'))
-        #self.auto_select()
+        self.auto_select()
         for entry in self.__entries:
             print(f'{entry.key}:\t{entry.description}')
 
@@ -88,30 +91,35 @@ class Menu:
                 print(menu_utils.MENU_INVALID_KEY_SELECTION)
 
     def run(self) -> None:
-        while True:
+        object.__setattr__(self, '_is_running', True)
+        while self._is_running:
             self.__print()
             is_exit = self.__select_from_input()
             if is_exit:
-                return
+                self.stop()
+
+    def stop(self) -> None:
+        object.__setattr__(self, '_is_running', False)
 
     @typechecked
     @dataclass()
     class Builder:
         __menu: Optional['Menu']
         __create_key = object()
-    
-        def __init__(self, description: Description):
-            self.__menu = Menu(description, self.__create_key)
-    
+
+
+        def __init__(self, description: Description  , auto_select: Callable[[], None] = lambda:None):
+            self.__menu = Menu(description=description,auto_select=auto_select, create_key= self.__create_key)
+
         @staticmethod
         def is_valid_key(key: Any) -> bool:
             return key == Menu.Builder.__create_key
-    
+
         def with_entry(self, value: Entry) -> 'Menu.Builder':
             validate('menu', self.__menu)
             self.__menu._add_entry(value, self.__create_key)
             return self
-    
+
         def build(self) -> 'Menu':
             validate('menu', self.__menu)
             validate('menu.entries', self.__menu._has_exit(), equals=True)

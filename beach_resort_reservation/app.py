@@ -24,14 +24,15 @@ class App:
         self.__login_menu = Menu.Builder(Description(app_utils.APP_NAME_LOGIN)) \
             .with_entry(Entry.create('1', 'Login', on_selected=lambda: self.__do_login())) \
             .with_entry(Entry.create('2', 'Register', on_selected=lambda: self.__do_registration())) \
-            .with_entry(Entry.create('0', 'Exit', on_selected=lambda: print(app_utils.APP_EXIT_MESSAGE), is_exit=True)) \
+            .with_entry(Entry.create('0', 'Exit', on_selected=lambda: print(colored(app_utils.APP_EXIT_MESSAGE, 'green')), is_exit=True)) \
             .build()
 
-        self.__menu = Menu.Builder(Description('Beach Resort Reservation')) \
+        self.__menu = Menu.Builder(description=Description(app_utils.APP_NAME_MENU),
+                                   auto_select=lambda : self.__show_reservations()) \
             .with_entry(Entry.create('1', 'Make a new reservation', on_selected=lambda: self.__make_new_reservation())) \
             .with_entry(Entry.create('2', 'Delete a reservation', on_selected=lambda: self.__delete_reservation())) \
-            .with_entry(Entry.create('3', 'Show my reservations', on_selected=lambda: self.__show_reservations())) \
-            .with_entry(Entry.create('0', 'Exit', on_selected=lambda: print(app_utils.APP_EXIT_MESSAGE), is_exit=True)) \
+            .with_entry(Entry.create('4', 'Logout', on_selected=lambda: self.__do_logout())) \
+            .with_entry(Entry.create('0', 'Exit', on_selected=lambda: print(colored(app_utils.APP_EXIT_MESSAGE, 'green')), is_exit=True)) \
             .build()
 
     # The following methos should call the REST API
@@ -44,9 +45,10 @@ class App:
         if login_response.status_code != 200 or login_response.json()['key'] is None:
             print(app_utils.LOGIN_FAILED)
         else:
-
             print(colored(app_utils.LOGIN_OK_WELCOME, 'green'))
             self.__api_key = login_response.json()['key']
+            self.__login_menu.stop()
+            self.__menu.run()
 
     def do_login_request(self, username: str, password: str):
         login_response = requests.post(url=f'{app_utils.API_SERVER}/auth/login/',
@@ -70,6 +72,9 @@ class App:
         else:
             print(colored(app_utils.REGISTRATION_OK_WELCOME, 'green'))
             self.__api_key = response_json['key']
+            self.__login_menu.stop()
+            self.__menu.run()
+
 
     def __show_registration_tips_to_user(self, response_json):
         print(response_json)
@@ -142,8 +147,29 @@ class App:
     # TODO delete on django
 
     def __show_reservations(self):
-        # TODO get the list of reservation from  django
+        #print('hello')
         pass
+
+    def __do_logout(self):
+        logout_response=self.do_logout_request()
+        self.__validate_logout_response(logout_response)
+
+
+    def __validate_logout_response(self, logout_response):
+        if logout_response.status_code != 200:
+            print(colored(app_utils.LOGOUT_FAILED, 'red'))
+        else:
+            print(colored(app_utils.LOGGED_OUT_MESSAGE, 'green'))
+            self.__menu.stop()
+            self.__login_menu.run()
+            self.__api_key=None
+
+
+
+
+    def do_logout_request(self):
+        logout_response = requests.post(url=f'{app_utils.API_SERVER}/auth/logout/', headers={'Authorization': f'Token: {self.__api_key}'})
+        return logout_response
 
     def run(self) -> None:
         try:
@@ -155,6 +181,8 @@ class App:
 
     def __run(self) -> None:
         self.__login_menu.run()
+
+
 
 
 def main(name: str):
