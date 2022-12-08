@@ -1,5 +1,7 @@
 import datetime
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, InitVar, field
+from typing import Optional, Any
 
 import valid8
 from typeguard import check_argument_types, check_return_type, typechecked
@@ -19,7 +21,7 @@ class NumberOfSeats:
                         max_value=domain_utils.MAX_NUMBER_OF_SEATS)
 
     def __str__(self):
-        return f'number of seats: {self.value}'
+        return f'{self.value}'
 
 
 @typechecked
@@ -32,7 +34,60 @@ class ReservedUmbrellaID:
                         max_value=domain_utils.MAX_NUMBER_UMBRELLA_ID)
 
     def __str__(self):
-        return f'umbrella id: {self.value}'
+        return f'{self.value}'
+
+
+@typechecked
+@dataclass(frozen=True, order=True)
+class Price:
+
+    __parse_pattern = re.compile(r'(?P<euro>\d{0,11})(?:\.(?P<cents>\d{1,2}))?')
+    value_in_cents: int
+    private_key: InitVar[Any] = field(default='')
+
+    __max_value = 10_000_000_000 - 1
+    __private_key = object()
+
+    def __post_init__(self, private_key):
+        valid8.validate('private_key', private_key, equals=self.__private_key)
+        valid8.validate('value_in_cents', self.value_in_cents, min_value=0, max_value=self.__max_value)
+
+    @staticmethod
+    def create_price(euros: int, cents: int) -> 'Price':
+        valid8.validate('euros', euros, min_value=0, max_value=Price.__max_value // 100)
+        valid8.validate('cents', cents, min_value=0, max_value=99)
+        value_in_cents = euros * 100 + cents
+        return Price(value_in_cents, Price.__private_key)
+
+    @property
+    def euros(self) -> int:
+        return self.value_in_cents // 100
+
+    @property
+    def cents(self) -> int:
+        return self.value_in_cents % 100
+
+    def __str__(self):
+        return f'{self.euros}.{self.cents:02}'
+
+    @staticmethod
+    def parse(value:str) ->'Price':
+        m=Price.__parse_pattern.fullmatch(value)
+        valid8.validate('value', m)
+        euro = m.group('euro')
+        cents = m.group('cents') if m.group('cents') else 0
+        return Price.create_price(int(euro), int(cents))
+
+@typechecked
+@dataclass(frozen=True, order=True)
+class ReservationID:
+    value:int
+    def __post_init__(self):
+        valid8.validate('reservation id', self.value, min_value=0)
+
+    def __str__(self):
+        return f'{self.value}'
+
 
 @typechecked
 @dataclass(frozen=True, order=True)
@@ -41,6 +96,9 @@ class Reservation:
     umbrella_id: ReservedUmbrellaID
     reservation_start_date: datetime.date
     reservation_end_date: datetime.date
+    reservation_price: Optional[Price]=None
+    reservation_id: Optional[ReservationID] = None
+
 
     def __post_init__(self):
         valid8.validate('end date validation', self.reservation_end_date, min_value=self.reservation_start_date,
@@ -81,4 +139,4 @@ class Email:
                         help_msg=domain_utils.EMAIL_HELP_MESSAGE_ON_CREATION)
 
     def __str__(self):
-        return f'username: {self.value}'
+        return f'email: {self.value}'

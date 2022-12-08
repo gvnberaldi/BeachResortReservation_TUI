@@ -1,3 +1,4 @@
+import dataclasses
 from dataclasses import field, InitVar, dataclass
 from typing import Callable, List, Dict, Optional, Any
 
@@ -52,11 +53,9 @@ class Menu:
     description: Description
     __entries: List[Entry] = field(default_factory=list, repr=False, init=False)
     __key2entry: Dict[Key, Entry] = field(default_factory=dict, repr=False, init=False)
+    __is_running: List[bool] = dataclasses.field(default_factory=lambda: [True], init=False)
     create_key: InitVar[Any] = field(default='')
     auto_select: Callable[[], None] = field(default=lambda: None)
-
-    _is_running: bool = True
-
     def __post_init__(self, create_key: Any):
         validate('create_key', create_key, custom=Menu.Builder.is_valid_key)
 
@@ -91,15 +90,15 @@ class Menu:
                 print(menu_utils.MENU_INVALID_KEY_SELECTION)
 
     def run(self) -> None:
-        object.__setattr__(self, '_is_running', True)
-        while self._is_running:
+        self.__is_running[0] = True
+        while self.__is_running[0]==True:
             self.__print()
             is_exit = self.__select_from_input()
             if is_exit:
                 self.stop()
 
     def stop(self) -> None:
-        object.__setattr__(self, '_is_running', False)
+       self.__is_running[0]=False
 
     @typechecked
     @dataclass()

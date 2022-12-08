@@ -7,7 +7,8 @@ from dateutil.relativedelta import *
 
 import beach_resort_reservation
 from beach_resort_reservation import domain_utils
-from beach_resort_reservation.domain import NumberOfSeats, ReservedUmbrellaID, Reservation, Password, Username, Email
+from beach_resort_reservation.domain import NumberOfSeats, ReservedUmbrellaID, Reservation, Password, Username, Email, \
+    ReservationID, Price
 
 
 class TestNumberOfSeats:
@@ -44,6 +45,52 @@ class TestReservationUmbrellaID:
         assert umbrella_id.value == test_input
 
 
+class TestReservationID:
+    @pytest.mark.parametrize("test_input", [-1, -100, -1000])
+    def test_reservation_id_more_than_maximum_number_must_raise_a_validation_error(self, test_input):
+        with pytest.raises(ValidationError):
+            ReservationID(test_input)
+
+    @pytest.mark.parametrize("test_input", [2, 3, 4, 1, 49, 50, 0])
+    def test_reservation_id_more_than_min_value_must_be_accepted(self, test_input):
+        reservation_id = ReservationID(test_input)
+        assert reservation_id.value == test_input
+
+
+class TestPrice:
+    def test_negative_price_must_raise_a_validation_error(self):
+        with pytest.raises(ValidationError):
+            euros: int = -100
+            cents: int = 99
+            Price.create_price(euros, cents)
+        with pytest.raises(ValidationError):
+            euros: int = 100
+            cents: int = -99
+            Price.create_price(euros, cents)
+
+    def test_price__with_cents_more_than_99_must_raise_a_validation_error(self):
+        with pytest.raises(ValidationError):
+            euros: int = 100
+            cents: int = 100
+            Price.create_price(euros, cents)
+
+    def test_price_with_euros_more_than_max_must_raise_a_validation_error(self):
+        with pytest.raises(ValidationError):
+            euros: int = 10_000_000_000 // 100
+            cents: int = 100
+            Price.create_price(euros, cents)
+
+    def test_price_must_create_a_Price_if_cents_and_euros_are_correct(self):
+        values = [(1, 99), (100, 10), (1000, 89), (27, 30)]
+        for value in values:
+            p = Price.create_price(value[0], value[1])
+            assert p.euros == value[0] and p.cents == value[1]
+
+    def test_price_must_create_a_Price_if_cents_and_euros_are_correct_in_parsing(self):
+        values = ['1.99', '1.60', '1.88']
+        for value in values:
+            p = Price.parse(value)
+            assert str(p) == value
 class TestReservation:
     @pytest.mark.parametrize("reservation_input",
                              [Reservation(number_of_seats=NumberOfSeats(2), umbrella_id=ReservedUmbrellaID(1), \
