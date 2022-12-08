@@ -18,7 +18,7 @@ class NumberOfSeats:
 
     def __post_init__(self):
         valid8.validate('number of seats value', self.value, min_value=domain_utils.MIN_NUMBER_OF_SEATS,
-                        max_value=domain_utils.MAX_NUMBER_OF_SEATS)
+                        max_value=domain_utils.MAX_NUMBER_OF_SEATS, help_msg=domain_utils.NUMBER_OF_SEATS_HELP_MESSAGE)
 
     def __str__(self):
         return f'{self.value}'
@@ -31,7 +31,7 @@ class ReservedUmbrellaID:
 
     def __post_init__(self):
         valid8.validate('reserved umbrella id', self.value, min_value=domain_utils.MIN_NUMBER_UMBRELLA_ID,
-                        max_value=domain_utils.MAX_NUMBER_UMBRELLA_ID)
+                        max_value=domain_utils.MAX_NUMBER_UMBRELLA_ID, help_msg=domain_utils.UMBRELLA_ID_HELP_MESSAGE)
 
     def __str__(self):
         return f'{self.value}'
@@ -103,7 +103,8 @@ class Reservation:
     def __post_init__(self):
         valid8.validate('end date validation', self.reservation_end_date, min_value=self.reservation_start_date,
                         max_value=self.reservation_start_date + relativedelta(
-                            months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE))
+                            months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE), help_msg=domain_utils.END_DATE_RESERVATION_ERROR)
+
 
 
 @typechecked

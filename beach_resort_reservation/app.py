@@ -12,9 +12,10 @@ from termcolor import colored
 from valid8 import validate, ValidationError
 from dateutil.parser import parse
 
-from beach_resort_reservation import app_utils
+from beach_resort_reservation import app_utils, domain_utils
 from beach_resort_reservation.domain import Username, Email, Password, Reservation, ReservationID, NumberOfSeats, \
     ReservedUmbrellaID, Price
+from beach_resort_reservation.exceptions import IntegerInputException, DateInputException
 from beach_resort_reservation.menu import Menu, Entry, Description
 
 
@@ -132,16 +133,32 @@ class App:
                 object_to_create = self.__ask_field(constructor, prompt, type_)
                 is_invalid_input = False
                 return object_to_create
-            except ValidationError as e:
+            except ValidationError as validation_error:
                 is_invalid_input = True
-                print(e.help_msg)
+                print(colored(validation_error.help_msg, 'red'))
+            except IntegerInputException as integer_exception:
+                print(colored(integer_exception.help_msg, 'red'))
+            except DateInputException as date_exception:
+                print(colored(date_exception.help_msg, 'red'))
 
     def __ask_field(self, constructor: Callable[[str], Any], prompt: str, type_: str):
         read_value: Any
         if type_ == 'password':
             read_value = getpass.getpass(prompt).strip()
-        elif type_ == 'reservation_id':
-            read_value = int(input(prompt))
+        elif type_ == 'reservation_id' or type_ == 'umbrella_id' or type_ == 'number_of_seats':
+
+            read_value_str = input(prompt)
+            if read_value_str.isnumeric():
+                read_value = int(read_value_str)
+            else:
+                raise IntegerInputException()
+
+        elif type_ == 'date':
+            # TODO ask if it is ok to do it in this way
+            try:
+                return constructor(input(prompt).strip(), '%Y-%m-%d')
+            except:
+                raise DateInputException()
         else:
             read_value = input(prompt)
             read_value = read_value.strip()
@@ -150,7 +167,50 @@ class App:
         return object_to_create
 
     def __make_new_reservation(self):
-        pass
+        new_reservation: Reservation = self.__read_new_reservation_from_user_input()
+        new_reservation_response = self.do_new_reservation_request(new_reservation)
+        self.__validate_new_reservation_response(new_reservation_response)
+
+    def do_new_reservation_request(self, new_reservation: Reservation):
+        new_reservation_response = requests.post(
+            url=f'{app_utils.API_SERVER}/beachreservation/',
+            headers={'Authorization': f'Token {self.__api_key}'},
+            data={'number_of_seats': new_reservation.number_of_seats.value,
+                  'reservation_start_date': new_reservation.reservation_start_date,
+                  'reservation_end_date': new_reservation.reservation_end_date,
+                  'reserved_umbrella_id': new_reservation.umbrella_id.value}, )
+        return new_reservation_response
+
+    def __validate_new_reservation_response(self, new_reservation_response):
+        if new_reservation_response.status_code != 201:
+            print(new_reservation_response.status_code)
+            print(new_reservation_response.content)
+        else:
+            print(colored(app_utils.NEW_RESERVATION_CORRECTLY_ADDED, 'green'))
+
+    def __read_new_reservation_from_user_input(self) -> Reservation:
+        reserved_umbrella_id: ReservedUmbrellaID = self.__ask_until_provided_field(ReservedUmbrellaID,
+                                                                                   'Choose the umbrella id: ',
+                                                                                   'umbrella_id')
+        number_of_seats: NumberOfSeats = \
+            self.__ask_until_provided_field(NumberOfSeats, f'How many seats you want to have in your umbrella? '
+                                                           f'Take in mind that the minimum is '
+                                                           f'{domain_utils.MIN_NUMBER_OF_SEATS} and the maximum is '
+                                                           f'{domain_utils.MAX_NUMBER_OF_SEATS}: ', 'number_of_seats')
+        reservation_start_date: datetime.date = self.__ask_until_provided_field(datetime.strptime,
+                                                                                'Insert the start date of the reservation: ',
+                                                                                'date').date()
+        reservation_end_date: datetime.date = self.__ask_until_provided_field(datetime.strptime,
+                                                                              'Insert the end date of the reservation: ',
+                                                                              'date').date()
+        try:
+            reservation: Reservation = Reservation(number_of_seats=number_of_seats,
+                                                   umbrella_id=reserved_umbrella_id,
+                                                   reservation_start_date=reservation_start_date,
+                                                   reservation_end_date=reservation_end_date)
+            return reservation
+        except ValidationError as e:
+            print(colored(e.help_msg, 'red'))
 
     def __delete_reservation(self):
         try:
@@ -194,7 +254,7 @@ class App:
         return reservation_response
 
     def __validate_reservation_list_response(self, reservation_list_response):
-        #print(reservation_list_response.content)
+        # print(reservation_list_response.content)
 
         if reservation_list_response.status_code != 200:
             print(colored(app_utils.RESERVATION_LIST_RETRIEVE_FAILED, 'red'))
@@ -206,7 +266,6 @@ class App:
         if len(response_json) > 0:
             print_separator = lambda: print('-' * 150)
             print_separator()
-
 
             print(app_utils.RESERVATION_FORMATTER % (
                 'Reservation ID', 'Reserved umbrella ID', 'Number of seats', 'From', 'To', 'Reservation price'))
@@ -251,12 +310,10 @@ class App:
             self.__run()
         except Exception as e:
             print('Panic error!', file=sys.stderr)
+            print(e)
+
     def __run(self) -> None:
         self.__login_menu.run()
-
-
-
-
 
     def __create_reservation_from_json_object(self, elem):
         id: ReservationID = ReservationID(elem['id'])
