@@ -56,6 +56,7 @@ class Menu:
     __is_running: List[bool] = dataclasses.field(default_factory=lambda: [True], init=False)
     create_key: InitVar[Any] = field(default='')
     auto_select: Callable[[], None] = field(default=lambda: None)
+
     def __post_init__(self, create_key: Any):
         validate('create_key', create_key, custom=Menu.Builder.is_valid_key)
 
@@ -91,14 +92,14 @@ class Menu:
 
     def run(self) -> None:
         self.__is_running[0] = True
-        while self.__is_running[0]==True:
+        while self.__is_running[0]:
             self.__print()
             is_exit = self.__select_from_input()
             if is_exit:
                 self.stop()
 
     def stop(self) -> None:
-       self.__is_running[0]=False
+        self.__is_running[0] = False
 
     @typechecked
     @dataclass()
@@ -106,9 +107,8 @@ class Menu:
         __menu: Optional['Menu']
         __create_key = object()
 
-
-        def __init__(self, description: Description  , auto_select: Callable[[], None] = lambda:None):
-            self.__menu = Menu(description=description,auto_select=auto_select, create_key= self.__create_key)
+        def __init__(self, description: Description, auto_select: Callable[[], None] = lambda: None):
+            self.__menu = Menu(description=description, auto_select=auto_select, create_key=self.__create_key)
 
         @staticmethod
         def is_valid_key(key: Any) -> bool:

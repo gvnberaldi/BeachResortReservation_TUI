@@ -1,14 +1,13 @@
 from datetime import datetime
-from unittest.mock import patch
 
 import pytest
-from valid8 import ValidationError
 from dateutil.relativedelta import *
+from valid8 import ValidationError
 
-import beach_resort_reservation
 from beach_resort_reservation import domain_utils
-from beach_resort_reservation.domain import NumberOfSeats, ReservedUmbrellaID, Reservation, Password, Username, Email, \
-    ReservationID, Price
+from beach_resort_reservation.domain import NumberOfSeats, ReservedUmbrellaID, NewReservation, Password, Username, \
+    Email, \
+    ReservationID, Price, ReservationFromServer
 
 
 class TestNumberOfSeats:
@@ -91,17 +90,19 @@ class TestPrice:
         for value in values:
             p = Price.parse(value)
             assert str(p) == value
-class TestReservation:
+
+
+class TestNewReservation:
     @pytest.mark.parametrize("reservation_input",
-                             [Reservation(number_of_seats=NumberOfSeats(2), umbrella_id=ReservedUmbrellaID(1), \
-                                          reservation_start_date=(datetime.today()).date(), \
-                                          reservation_end_date=(datetime.today() + relativedelta(days=+1)).date()),
-                              Reservation(number_of_seats=NumberOfSeats(2), umbrella_id=ReservedUmbrellaID(1), \
-                                          reservation_start_date=datetime.today().date(), \
-                                          reservation_end_date=(datetime.today() + relativedelta(
-                                              months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE)).date()),
+                             [NewReservation(number_of_seats=NumberOfSeats(2), umbrella_id=ReservedUmbrellaID(1),
+                                             start_date=(datetime.today()).date(),
+                                             end_date=(datetime.today() + relativedelta(days=+1)).date()),
+                              NewReservation(number_of_seats=NumberOfSeats(2), umbrella_id=ReservedUmbrellaID(1),
+                                             start_date=datetime.today().date(),
+                                             end_date=(datetime.today() + relativedelta(
+                                                 months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE)).date()),
                               ])
-    def test_reservation_with_correct_data_must_raise_validation_error(self, reservation_input):
+    def test_reservation_with_correct_data_must_create_the_reservation(self, reservation_input):
         assert reservation_input.number_of_seats.value == 2
 
     @pytest.mark.parametrize("reservation_input", [
@@ -115,10 +116,53 @@ class TestReservation:
     ])
     def test_reservation_with_wrong_end_date_must_raise_validation_error(self, reservation_input):
         with pytest.raises(ValidationError):
-            Reservation(number_of_seats=NumberOfSeats(reservation_input[0]),
-                        umbrella_id=ReservedUmbrellaID(reservation_input[1]), \
-                        reservation_start_date=reservation_input[2], \
-                        reservation_end_date=reservation_input[3])
+            NewReservation(number_of_seats=NumberOfSeats(reservation_input[0]),
+                           umbrella_id=ReservedUmbrellaID(reservation_input[1]),
+                           start_date=reservation_input[2],
+                           end_date=reservation_input[3])
+
+
+class TestReservationFromServer:
+    @pytest.mark.parametrize("reservation_input",
+                             [ReservationFromServer(number_of_seats=NumberOfSeats(2), umbrella_id=ReservedUmbrellaID(1),
+                                                    start_date=(datetime.today()).date(),
+                                                    end_date=(datetime.today() + relativedelta(days=+1)).date(),
+                                                    price=Price.create_price(100, 0),
+                                                    id=ReservationID(10)),
+                              ReservationFromServer(number_of_seats=NumberOfSeats(2), umbrella_id=ReservedUmbrellaID(1),
+                                                    start_date=datetime.today().date(),
+                                                    end_date=(datetime.today() + relativedelta(
+                                                        months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE)).date(),
+                                                    price=Price.create_price(100, 0),
+                                                    id=ReservationID(10)),
+                              ])
+    def test_reservation_from_server_with_correct_data_must_create_the_reservation(self, reservation_input):
+        assert reservation_input.number_of_seats.value == 2
+
+    @pytest.mark.parametrize("reservation_input", [
+        (2, 1, datetime.today().date(), (datetime.today() + relativedelta(days=-1)).date(), Price.create_price(100, 0),
+         ReservationID(10)),
+        (2, 1, datetime.today().date(),
+         (datetime.today() + relativedelta(months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE, days=1)).date(),
+         Price.create_price(100, 0), ReservationID(10)),
+        (2, 1, datetime.today().date(), (datetime.today() + relativedelta(years=1)).date(), Price.create_price(100, 0),
+         ReservationID(10)),
+        (2, 1, datetime.today().date(),
+         (datetime.today() + relativedelta(months=-domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE)).date(),
+         Price.create_price(100, 0), ReservationID(10)),
+        (2, 1, datetime.today().date(),
+         (datetime.today() + relativedelta(months=-domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE)).date(),
+         Price.create_price(100, 0), ReservationID(10))
+
+    ])
+    def test_reservation_with_wrong_end_date_must_raise_validation_error(self, reservation_input):
+        with pytest.raises(ValidationError):
+            ReservationFromServer(number_of_seats=NumberOfSeats(reservation_input[0]),
+                                  umbrella_id=ReservedUmbrellaID(reservation_input[1]),
+                                  start_date=reservation_input[2],
+                                  end_date=reservation_input[3],
+                                  price=reservation_input[4],
+                                  id=reservation_input[5])
 
 
 class TestPassword:
@@ -151,14 +195,14 @@ class TestUsername:
         'a/',
         '',
         'c' * 200,
-        '+' * 4
+        '£' * 4
     ])
     def test_username_must_raise_a_validation_error_if_username_is_not_well_formed(self, username_input):
         with pytest.raises(ValidationError):
             Username(username_input)
 
     @pytest.mark.parametrize("username_input", [
-        'a!@#$%^&_-',
+        'a@+_-',
         'jesunccl',
         'aaaaa87',
         'john_22'

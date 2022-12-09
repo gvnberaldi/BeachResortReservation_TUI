@@ -4,8 +4,8 @@ from dataclasses import dataclass, InitVar, field
 from typing import Optional, Any
 
 import valid8
-from typeguard import check_argument_types, check_return_type, typechecked
 from dateutil.relativedelta import relativedelta
+from typeguard import typechecked
 
 from beach_resort_reservation import domain_utils
 from validation.regex import pattern
@@ -40,7 +40,6 @@ class ReservedUmbrellaID:
 @typechecked
 @dataclass(frozen=True, order=True)
 class Price:
-
     __parse_pattern = re.compile(r'(?P<euro>\d{0,11})(?:\.(?P<cents>\d{1,2}))?')
     value_in_cents: int
     private_key: InitVar[Any] = field(default='')
@@ -71,17 +70,19 @@ class Price:
         return f'{self.euros}.{self.cents:02}'
 
     @staticmethod
-    def parse(value:str) ->'Price':
-        m=Price.__parse_pattern.fullmatch(value)
+    def parse(value: str) -> 'Price':
+        m = Price.__parse_pattern.fullmatch(value)
         valid8.validate('value', m)
         euro = m.group('euro')
         cents = m.group('cents') if m.group('cents') else 0
         return Price.create_price(int(euro), int(cents))
 
+
 @typechecked
 @dataclass(frozen=True, order=True)
 class ReservationID:
-    value:int
+    value: int
+
     def __post_init__(self):
         valid8.validate('reservation id', self.value, min_value=0)
 
@@ -91,20 +92,34 @@ class ReservationID:
 
 @typechecked
 @dataclass(frozen=True, order=True)
-class Reservation:
+class ReservationFromServer:
     number_of_seats: NumberOfSeats
     umbrella_id: ReservedUmbrellaID
-    reservation_start_date: datetime.date
-    reservation_end_date: datetime.date
-    reservation_price: Optional[Price]=None
-    reservation_id: Optional[ReservationID] = None
-
+    start_date: datetime.date
+    end_date: datetime.date
+    price: Price
+    id: ReservationID
 
     def __post_init__(self):
-        valid8.validate('end date validation', self.reservation_end_date, min_value=self.reservation_start_date,
-                        max_value=self.reservation_start_date + relativedelta(
-                            months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE), help_msg=domain_utils.END_DATE_RESERVATION_ERROR)
+        valid8.validate('end date validation', self.end_date, min_value=self.start_date,
+                        max_value=self.start_date + relativedelta(
+                            months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE),
+                        help_msg=domain_utils.END_DATE_RESERVATION_ERROR)
 
+
+@typechecked
+@dataclass(frozen=True, order=True)
+class NewReservation:
+    number_of_seats: NumberOfSeats
+    umbrella_id: ReservedUmbrellaID
+    start_date: datetime.date
+    end_date: datetime.date
+
+    def __post_init__(self):
+        valid8.validate('end date validation', self.end_date, min_value=self.start_date,
+                        max_value=self.start_date + relativedelta(
+                            months=domain_utils.MAX_DATE_DELTA_MONTHS_END_DATE),
+                        help_msg=domain_utils.END_DATE_RESERVATION_ERROR)
 
 
 @typechecked
@@ -113,11 +128,12 @@ class Username:
     value: str
 
     def __post_init__(self):
-        valid8.validate('username', self.value, min_len=1, max_len=150,custom=pattern(domain_utils.USERNAME_REGEX) ,
+        valid8.validate('username', self.value, min_len=1, max_len=150, custom=pattern(domain_utils.USERNAME_REGEX),
                         help_msg=domain_utils.USERNAME_HELP_MESSAGE_ON_CREATION)
 
     def __str__(self):
         return f'username: {self.value}'
+
 
 @typechecked
 @dataclass(frozen=True, order=True)
@@ -125,7 +141,7 @@ class Password:
     value: str
 
     def __post_init__(self):
-        valid8.validate('password', self.value, min_len=8, max_len=150, custom = pattern(domain_utils.PASSWORD_REGEX),
+        valid8.validate('password', self.value, min_len=8, max_len=150, custom=pattern(domain_utils.PASSWORD_REGEX),
                         help_msg=domain_utils.PASSWORD_HELP_MESSAGE_ON_CREATION)
 
 
