@@ -45,21 +45,20 @@ class App:
             .build()
 
     def __do_login(self):
-        try:
-            username: Username = self.__ask_until_provided_field(Username, 'Username: ', 'username')
-            password: Password = self.__ask_field(Password, 'Password: ', 'password')
 
-            login_response = self.do_login_request(username=username.value, password=password.value)
+        username: str = input('Username: ')
+        password: str = getpass.getpass('Password: ')
 
-            if login_response.status_code != 200 or login_response.json()['key'] is None:
-                print(app_utils.LOGIN_FAILED)
-            else:
-                print(colored(app_utils.LOGIN_OK_WELCOME, app_utils.SUCCESS_ACTION_COLOR))
-                self.__api_key = login_response.json()['key']
-                self.__login_menu.stop()
-                self.__menu.run()
-        except ValidationError as e:
-            print(colored(e.help_msg, app_utils.FAIL_ACTION_COLOR))
+        login_response = self.do_login_request(username=username, password=password)
+
+        if login_response.status_code != 200 or login_response.json()['key'] is None:
+            print(app_utils.LOGIN_FAILED)
+        else:
+            print(colored(app_utils.LOGIN_OK_WELCOME, app_utils.SUCCESS_ACTION_COLOR))
+            self.__api_key = login_response.json()['key']
+            self.__login_menu.stop()
+            self.__menu.run()
+
 
     def do_login_request(self, username: str, password: str):
         login_response = requests.post(url=f'{app_utils.API_SERVER}{app_utils.LOGIN_END_POINT}',

@@ -33,20 +33,6 @@ class TestApp:
             mocked_input.assert_called()
             mocked_getpass.assert_called()
 
-    @patch('builtins.input', side_effect=['1', 'cris,', '0'])
-    @patch('builtins.print')
-    @patch.object(getpass, 'getpass', return_value='password')
-    def test_app_do_login_must_print_error_if_the_username_is_not_in_the_correct_form(self, mocked_input,
-                                                                                      mocked_print: Mock,
-                                                                                      mocked_getpass):
-        response_mock = Response()
-        response_mock.status_code = 400
-
-        with patch.object(beach_resort_reservation.app.App, 'do_login_request', return_value=response_mock):
-            main('__main__')
-            mocked_print.assert_any_call(domain_utils.USERNAME_HELP_MESSAGE_ON_CREATION)
-            mocked_input.assert_called()
-            mocked_getpass.assert_called()
 
     @patch('builtins.input', side_effect=['1', 'cris', '0'])
     @patch('builtins.print')
@@ -60,22 +46,6 @@ class TestApp:
             main('__main__')
 
             mocked_print.assert_any_call(app_utils.LOGIN_OK_WELCOME)
-            mocked_input.assert_called()
-            mocked_getpass.assert_called()
-
-    @patch('builtins.input', side_effect=['1', 'cris,', 'cris', '0'])
-    @patch('builtins.print')
-    @patch.object(getpass, 'getpass', side_effect=['', 'password'])
-    def test_app_do_login_must_print_error_message_if_credentials_are_not_in_the_correct_format(self, mocked_input,
-                                                                                                mocked_print: Mock,
-                                                                                                mocked_getpass):
-        response_mock = Response()
-        response_mock.status_code = 400
-
-        with patch.object(beach_resort_reservation.app.App, 'do_login_request', return_value=response_mock):
-            main('__main__')
-            mocked_print.assert_any_call(domain_utils.USERNAME_HELP_MESSAGE_ON_CREATION)
-            mocked_print.assert_any_call(domain_utils.PASSWORD_HELP_MESSAGE_ON_CREATION)
             mocked_input.assert_called()
             mocked_getpass.assert_called()
 
@@ -166,35 +136,47 @@ class TestApp:
     @patch('builtins.input', side_effect=['1', 'cris', '0'])
     @patch('builtins.print')
     @patch.object(getpass, 'getpass', return_value='password')
-    def test_app_do_login_must_change_menu_if_credential_are_valid(self, mocked_input, mocked_print, mocked_getpass):
+    def test_app_do_login_must_change_menu_if_credential_are_valid(self, mocked_input, mocked_print : Mock, mocked_getpass):
         response_mock = Response()
         response_mock.status_code = 200
         response_mock._content = b'{ "key" : "key value" }'
-        with patch.object(beach_resort_reservation.app.App, 'do_login_request', return_value=response_mock):
-            main('__main__')
 
-            mocked_print.assert_any_call(app_utils.LOGIN_OK_WELCOME)
-            mocked_print.assert_any_call('1:\tMake a new reservation')
-            mocked_print.assert_any_call('2:\tDelete a reservation')
-            mocked_print.assert_any_call('4:\tLogout')
-            mocked_input.assert_called()
-            mocked_getpass.assert_called()
+        response_mock_retrieve = Response()
+        response_mock_retrieve.status_code = 403
+        response_mock_retrieve._content = b'{}'
+
+        with patch.object(beach_resort_reservation.app.App, 'do_login_request', return_value=response_mock):
+            with patch.object(beach_resort_reservation.app.App, 'do_retrieve_reservation_list_request',
+                              return_value=response_mock_retrieve):
+                main('__main__')
+                mocked_print.assert_any_call(app_utils.LOGIN_OK_WELCOME)
+                mocked_print.assert_any_call('1:\tMake a new reservation')
+                mocked_print.assert_any_call('2:\tDelete a reservation')
+                mocked_print.assert_any_call('4:\tLogout')
+                mocked_input.assert_called()
+                mocked_getpass.assert_called()
 
     @patch('builtins.input', side_effect=['1', 'cris', '4', '0'])
     @patch('builtins.print')
     @patch.object(getpass, 'getpass', return_value='password')
-    def test_app_do_logout_must_print_a_confirm_message_if_all_is_correct(self, mocked_input, mocked_print,
+    def test_app_do_logout_must_print_a_confirm_message_if_all_is_correct(self, mocked_input, mocked_print:Mock,
                                                                           mocked_getpass):
         response_mock = Response()
         response_mock.status_code = 200
         response_mock._content = b'{ "key" : "key value" }'
+
+        response_mock_retrieve = Response()
+        response_mock_retrieve.status_code = 403
+        response_mock_retrieve._content = b'{}'
         with patch.object(beach_resort_reservation.app.App, 'do_login_request', return_value=response_mock):
             with patch.object(beach_resort_reservation.app.App, 'do_logout_request',
                               return_value=response_mock):
-                main('__main__')
-                mocked_print.assert_any_call(app_utils.LOGGED_OUT_MESSAGE)
-                mocked_input.assert_called()
-                mocked_getpass.assert_called()
+                with patch.object(beach_resort_reservation.app.App, 'do_retrieve_reservation_list_request',
+                                  return_value=response_mock_retrieve):
+                    main('__main__')
+                    mocked_print.assert_any_call(app_utils.LOGGED_OUT_MESSAGE)
+                    mocked_input.assert_called()
+                    mocked_getpass.assert_called()
 
     @patch('builtins.input', side_effect=['1', 'cris', '4', '0'])
     @patch('builtins.print')
@@ -207,15 +189,22 @@ class TestApp:
         response_mock_login.status_code = 200
         response_mock_login._content = b'{ "key" : "key value" }'
 
+        response_mock_retrieve = Response()
+        response_mock_retrieve.status_code = 403
+        response_mock_retrieve._content = b'{}'
+
         response_mock_logout = Response()
         response_mock_logout.status_code = 400
         with patch.object(beach_resort_reservation.app.App, 'do_login_request', return_value=response_mock_login):
-            with patch.object(beach_resort_reservation.app.App, 'do_logout_request',
-                              return_value=response_mock_logout):
-                main('__main__')
-                mocked_print.assert_any_call(app_utils.LOGOUT_FAILED)
-                mocked_input.assert_called()
-                mocked_getpass.assert_called()
+            with patch.object(beach_resort_reservation.app.App, 'do_retrieve_reservation_list_request',
+                              return_value=response_mock_retrieve):
+                with patch.object(beach_resort_reservation.app.App, 'do_logout_request',
+                                  return_value=response_mock_logout):
+                    main('__main__')
+
+                    mocked_print.assert_any_call(app_utils.LOGOUT_FAILED)
+                    mocked_input.assert_called()
+                    mocked_getpass.assert_called()
 
     @patch('builtins.input', side_effect=['1', 'cris', '0'])
     @patch('builtins.print')
