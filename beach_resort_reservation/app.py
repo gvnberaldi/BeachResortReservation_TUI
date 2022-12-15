@@ -3,9 +3,12 @@ import getpass
 import sys
 from datetime import datetime
 from typing import Any, Callable, List, Optional
+import json
 
 import requests
+import typeguard
 from dateutil.parser import parse
+from requests import Response
 from termcolor import colored
 from valid8 import ValidationError
 
@@ -16,8 +19,9 @@ from beach_resort_reservation.exceptions import IntegerInputException, DateInput
 from beach_resort_reservation.menu import Menu, Entry, Description
 
 
+@typeguard.typechecked
 class App:
-    __delimiter = '\t'
+    __delimiter: str = '\t'
 
     __logged: bool = False
     __api_key: Optional[str] = None
@@ -35,7 +39,7 @@ class App:
 
         self.__menu = Menu.Builder(description=Description(app_utils.APP_NAME_MENU),
                                    auto_select=lambda: self.__show_reservations()) \
-            .with_entry(Entry.create('1', 'Make a new reservation', on_selected=lambda: self.__make_new_reservation())) \
+            .with_entry(Entry.create('1', 'Make a new reservation', on_selected=lambda: self.__make_new_reservation()))\
             .with_entry(Entry.create('2', 'Delete a reservation', on_selected=lambda: self.__delete_reservation())) \
             .with_entry(Entry.create('4', 'Logout', on_selected=lambda: self.__do_logout())) \
             .with_entry(
@@ -52,15 +56,15 @@ class App:
         login_response = self.do_login_request(username=username, password=password)
 
         if login_response.status_code != 200 or login_response.json()['key'] is None:
-            print(app_utils.LOGIN_FAILED)
+            print(colored(app_utils.LOGIN_FAILED, app_utils.FAIL_ACTION_COLOR))
         else:
             print(colored(app_utils.LOGIN_OK_WELCOME, app_utils.SUCCESS_ACTION_COLOR))
             self.__api_key = login_response.json()['key']
             self.__login_menu.stop()
             self.__menu.run()
 
-
-    def do_login_request(self, username: str, password: str):
+    @staticmethod
+    def do_login_request(username: str, password: str):
         login_response = requests.post(url=f'{app_utils.API_SERVER}{app_utils.LOGIN_END_POINT}',
                                        data={'username': username, 'password': password})
         return login_response
@@ -71,9 +75,9 @@ class App:
             registration_response = self.do_registration_request(username, password, repeated_password, email)
             self.__validate_registration_response(registration_response)
 
-    def __validate_registration_response(self, registration_response):
+    def __validate_registration_response(self, registration_response:Response):
 
-        response_json = registration_response.json()
+        response_json : json = registration_response.json()
         if registration_response.status_code != 201 or registration_response.json()['key'] is None:
             print(colored(app_utils.REGISTRATION_FAILED, app_utils.FAIL_ACTION_COLOR))
 
@@ -86,7 +90,8 @@ class App:
             self.__login_menu.stop()
             self.__menu.run()
 
-    def __show_registration_tips_to_fix_errors_to_user(self, response_json):
+    @staticmethod
+    def __show_registration_tips_to_fix_errors_to_user(response_json : json):
         print(colored('This could help you:', app_utils.FAIL_ACTION_COLOR))
         if 'non_field_errors' in response_json:
             for elem in response_json['non_field_errors']:
@@ -125,7 +130,8 @@ class App:
 
         return email, password, repeated_password, username
 
-    def do_registration_request(self, username: Username, password: Password, repeated_password: Password,
+    @staticmethod
+    def do_registration_request(username: Username, password: Password, repeated_password: Password,
                                 email: Email):
         registration_response = requests.post(url=f'{app_utils.API_SERVER}{app_utils.REGISTRATION_END_POINT}',
                                               data={'username': username.value, 'password1': password.value,
@@ -147,7 +153,8 @@ class App:
             except DateInputException as date_exception:
                 print(colored(date_exception.help_msg, app_utils.FAIL_ACTION_COLOR))
 
-    def __ask_field(self, constructor: Callable[[str], Any], prompt: str, type_: str):
+    @staticmethod
+    def __ask_field(constructor: Callable[[str], Any], prompt: str, type_: str):
         read_value: Any
         if type_ == 'password':
             read_value = getpass.getpass(prompt).strip()
@@ -179,7 +186,8 @@ class App:
             new_reservation_response = self.do_new_reservation_request(new_reservation)
             self.__validate_new_reservation_response(new_reservation_response)
 
-    def __read_date_from_user(self, date: str):
+    @staticmethod
+    def __read_date_from_user(date: str):
         try:
             return datetime.strptime(date, app_utils.DATE_PATTERN)
         except ValueError:
@@ -195,10 +203,10 @@ class App:
                   'reserved_umbrella_id': new_reservation.umbrella_id.value}, )
         return new_reservation_response
 
-    def __validate_new_reservation_response(self, new_reservation_response):
+    def __validate_new_reservation_response(self, new_reservation_response: Response):
         if new_reservation_response.status_code != 201:
             print(colored(app_utils.NEW_RESERVATION_FAILED, app_utils.FAIL_ACTION_COLOR))
-            new_reservation_response_json = new_reservation_response.json()
+            new_reservation_response_json : json = new_reservation_response.json()
             self.__show_new_reservation_tips_to_fix_errors_to_user(new_reservation_response_json)
         else:
             print(colored(app_utils.NEW_RESERVATION_CORRECTLY_ADDED, app_utils.SUCCESS_ACTION_COLOR))
@@ -229,7 +237,8 @@ class App:
         except ValidationError as e:
             print(colored(e.help_msg, app_utils.FAIL_ACTION_COLOR))
 
-    def __show_new_reservation_tips_to_fix_errors_to_user(self, response_json):
+    @staticmethod
+    def __show_new_reservation_tips_to_fix_errors_to_user(response_json :json):
         print(colored('This could help you:', app_utils.FAIL_ACTION_COLOR))
         if 'number_of_seats' in response_json:
             print(colored('\tThere is a problem with the number of seats:', app_utils.FAIL_ACTION_COLOR))
@@ -257,7 +266,8 @@ class App:
         self.__validate_delete_response(reservation_delete_response=reservation_delete_response,
                                         reservation_id=reservation_id)
 
-    def __validate_delete_response(self, reservation_delete_response, reservation_id: ReservationID):
+    @staticmethod
+    def __validate_delete_response(reservation_delete_response : Response, reservation_id: ReservationID):
         if reservation_delete_response.status_code != 200 and reservation_delete_response.status_code != 204 and \
                 reservation_delete_response.status_code != 202:
             if reservation_delete_response.status_code == 404:
@@ -278,23 +288,22 @@ class App:
         reservation_list_response = self.do_retrieve_reservation_list_request()
         self.__validate_reservation_list_response(reservation_list_response)
 
-
     def do_retrieve_reservation_list_request(self):
 
         reservation_response = requests.get(url=f'{app_utils.API_SERVER}{app_utils.RESERVATIONS_END_POINT}',
                                             headers={'Authorization': f'Token {self.__api_key}'})
         return reservation_response
 
-    def __validate_reservation_list_response(self, reservation_list_response):
+    def __validate_reservation_list_response(self, reservation_list_response : Response):
         # print(reservation_list_response.content)
 
         if reservation_list_response.status_code != 200:
             print(colored(app_utils.RESERVATION_LIST_RETRIEVE_FAILED, app_utils.FAIL_ACTION_COLOR))
         else:
-            response_json = reservation_list_response.json()
+            response_json : json = reservation_list_response.json()
             self.__print_reservation_list(response_json)
 
-    def __print_reservation_list(self, response_json):
+    def __print_reservation_list(self, response_json:json):
         if len(response_json) > 0:
             print_separator: () = lambda: print('-' * 150)
             print_separator()
@@ -319,7 +328,7 @@ class App:
         logout_response = self.do_logout_request()
         self.__validate_logout_response(logout_response)
 
-    def __validate_logout_response(self, logout_response):
+    def __validate_logout_response(self, logout_response : Response):
         if logout_response.status_code != 200:
             print(colored(app_utils.LOGOUT_FAILED, app_utils.FAIL_ACTION_COLOR))
         else:
@@ -344,7 +353,8 @@ class App:
     def __run(self) -> None:
         self.__login_menu.run()
 
-    def __create_reservation_from_json_object(self, elem):
+    @staticmethod
+    def __create_reservation_from_json_object(elem:json):
         reservation_id: ReservationID = ReservationID(elem['id'])
         number_of_seats: NumberOfSeats = NumberOfSeats(elem['number_of_seats'])
         reservation_start_date: datetime.date = parse(elem['reservation_start_date']).date()
