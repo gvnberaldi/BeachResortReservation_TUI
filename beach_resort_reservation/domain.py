@@ -1,7 +1,7 @@
 import datetime
 import re
 from dataclasses import dataclass, InitVar, field
-from typing import Optional, Any
+from typing import Any
 
 import valid8
 from dateutil.relativedelta import relativedelta

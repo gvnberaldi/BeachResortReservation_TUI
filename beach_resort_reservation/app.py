@@ -188,8 +188,6 @@ class App:
         else:
             print(colored(app_utils.NEW_RESERVATION_CORRECTLY_ADDED, app_utils.SUCCESS_ACTION_COLOR))
 
-
-
     @staticmethod
     def __show_new_reservation_tips_to_fix_errors_to_user(response_json: json):
         print(colored('This could help you:', app_utils.FAIL_ACTION_COLOR))
@@ -237,9 +235,6 @@ class App:
             print(colored(f'Reservation with id: {reservation_id.value}{app_utils.DELETE_OK}',
                           app_utils.SUCCESS_ACTION_COLOR))
 
-
-
-
     def __show_reservations(self):
         reservation_list_response = self.do_retrieve_reservation_list_request()
         self.__validate_reservation_list_response(reservation_list_response)
@@ -251,7 +246,6 @@ class App:
         return reservation_response
 
     def __validate_reservation_list_response(self, reservation_list_response: Response):
-        # print(reservation_list_response.content)
 
         if reservation_list_response.status_code != 200:
             print(colored(app_utils.RESERVATION_LIST_RETRIEVE_FAILED, app_utils.FAIL_ACTION_COLOR))
@@ -298,18 +292,6 @@ class App:
             self.__login_menu.run()
             # optional
             self.__api_key = None
-
-
-
-    def run(self) -> None:
-        try:
-            self.__run()
-        except Exception as e:
-            print('Panic error!', file=sys.stderr)
-            print(e)
-
-    def __run(self) -> None:
-        self.__login_menu.run()
 
     @staticmethod
     def __create_reservation_from_json_object(elem: json):
@@ -376,6 +358,16 @@ class App:
             return datetime.strptime(date, app_utils.DATE_PATTERN)
         except ValueError:
             return None
+
+    def run(self) -> None:
+        try:
+            self.__run()
+        except Exception as e:
+            print('Internal error, it seems that we have a trouble!', file=sys.stderr)
+            print(e)
+
+    def __run(self) -> None:
+        self.__login_menu.run()
 
 
 def main(name: str):

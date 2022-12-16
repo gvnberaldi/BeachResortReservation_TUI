@@ -1,12 +1,15 @@
+import datetime
 import getpass
 from unittest.mock import patch, Mock
 
+import requests
 from requests import Response
 
 import beach_resort_reservation
 from beach_resort_reservation import app_utils, domain_utils
-from beach_resort_reservation.app import main
-from beach_resort_reservation.domain import Price
+from beach_resort_reservation.app import main, App
+from beach_resort_reservation.domain import Price, ReservationID, Username, Password, Email, NewReservation, \
+    NumberOfSeats, ReservedUmbrellaID
 
 
 class TestApp:
@@ -32,7 +35,6 @@ class TestApp:
             mocked_print.assert_any_call(app_utils.LOGIN_FAILED)
             mocked_input.assert_called()
             mocked_getpass.assert_called()
-
 
     @patch('builtins.input', side_effect=['1', 'cris', '0'])
     @patch('builtins.print')
@@ -136,7 +138,8 @@ class TestApp:
     @patch('builtins.input', side_effect=['1', 'cris', '0'])
     @patch('builtins.print')
     @patch.object(getpass, 'getpass', return_value='password')
-    def test_app_do_login_must_change_menu_if_credential_are_valid(self, mocked_input, mocked_print : Mock, mocked_getpass):
+    def test_app_do_login_must_change_menu_if_credential_are_valid(self, mocked_input, mocked_print: Mock,
+                                                                   mocked_getpass):
         response_mock = Response()
         response_mock.status_code = 200
         response_mock._content = b'{ "key" : "key value" }'
@@ -159,7 +162,7 @@ class TestApp:
     @patch('builtins.input', side_effect=['1', 'cris', '4', '0'])
     @patch('builtins.print')
     @patch.object(getpass, 'getpass', return_value='password')
-    def test_app_do_logout_must_print_a_confirm_message_if_all_is_correct(self, mocked_input, mocked_print:Mock,
+    def test_app_do_logout_must_print_a_confirm_message_if_all_is_correct(self, mocked_input, mocked_print: Mock,
                                                                           mocked_getpass):
         response_mock = Response()
         response_mock.status_code = 200
@@ -533,9 +536,9 @@ class TestApp:
     @patch('builtins.input', side_effect=['1', 'cris', '1', '1', '2', '2022-10-10', '2022-10-9', '0'])
     @patch('builtins.print')
     @patch.object(getpass, 'getpass', return_value='password')
-    def test_app_make_new_reservation_must_print_an_error_if_the_end_date_is_before_the_start( self, mocked_input,
-                                                                                               mocked_print: Mock,
-                                                                                               mocked_getpass):
+    def test_app_make_new_reservation_must_print_an_error_if_the_end_date_is_before_the_start(self, mocked_input,
+                                                                                              mocked_print: Mock,
+                                                                                              mocked_getpass):
         response_mock_login = Response()
         response_mock_login.status_code = 200
         response_mock_login._content = b'{ "key" : "key value" }'
@@ -558,3 +561,53 @@ class TestApp:
 
                     mocked_input.assert_called()
                     mocked_getpass.assert_called()
+
+    def test_app_do_reservation_delete_request_must_return_the_right_response(self):
+        response_mock_delete = Response()
+        response_mock_delete.status_code = 204
+        with patch.object(requests, 'delete', return_value=response_mock_delete):
+            response: Response = App().do_reservation_delete_request(ReservationID(1))
+            assert response.status_code == response_mock_delete.status_code
+
+    def test_app_do_login_request_must_return_the_right_response(self):
+        response_mock_login = Response()
+        response_mock_login.status_code = 200
+        response_mock_login._content = b'{ "key" : "key value" }'
+        with patch.object(requests, 'post', return_value=response_mock_login):
+            response: Response = App().do_login_request('username', 'pass')
+            assert response.status_code == response_mock_login.status_code
+
+    def test_app_do_registration_request_must_return_the_right_response(self):
+        response_mock_registration = Response()
+        response_mock_registration.status_code = 201
+        response_mock_registration._content = b'{ }'
+        with patch.object(requests, 'post', return_value=response_mock_registration):
+            response: Response = App().do_registration_request(Username('username'), Password('password9000'),
+                                                               Password('password9000'), Email('cris@lib.it'))
+            assert response.status_code == response_mock_registration.status_code
+
+    def test_app_do_nw_reservation_request_must_return_the_right_response(self):
+        response_mock_create = Response()
+        response_mock_create.status_code = 201
+        with patch.object(requests, 'post', return_value=response_mock_create):
+            response: Response = App().do_new_reservation_request(NewReservation(NumberOfSeats(2),
+                                                                                 ReservedUmbrellaID(10),
+                                                                                 datetime.date.today(),
+                                                                                 datetime.date.today()))
+            assert response.status_code == response_mock_create.status_code
+
+    def test_app_do_logout_request_must_return_the_right_response(self):
+        response_mock_logout = Response()
+        response_mock_logout.status_code = 200
+
+        with patch.object(requests, 'post', return_value=response_mock_logout):
+            response: Response = App().do_logout_request()
+            assert response.status_code == response_mock_logout.status_code
+
+    def test_app_do_retrieve_reservation_list_request_must_return_the_right_response(self):
+        response_mock_logout = Response()
+        response_mock_logout.status_code = 200
+
+        with patch.object(requests, 'get', return_value=response_mock_logout):
+            response: Response = App().do_retrieve_reservation_list_request()
+            assert response.status_code == response_mock_logout.status_code
